@@ -11,11 +11,11 @@ def get_file_content(working_directory, file_path):
         if not os.path.isfile(target):
             return f'Error: File not found or is not a regular file: "{file_path}"'
         
-        openfile = open(target)
-        file_content = openfile.read(10000)
-        if openfile.read(1):
-            file_content += f'[...File "{file_path}" truncated at 10000 characters]'
+        with open(target) as openfile:
+            file_content = openfile.read(10000)
+            if openfile.read(1):
+                file_content += f'[...File "{file_path}" truncated at 10000 characters]'
         return file_content
     
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error: getting file contents: {e}"

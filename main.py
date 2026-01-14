@@ -1,8 +1,10 @@
+from logging import config
 import os
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 import argparse
+import LLM_config
 
 def main():
     load_dotenv()
@@ -19,7 +21,13 @@ def main():
     client = genai.Client(api_key=api_key)
     messages = [types.Content(role="user", parts=[types.Part(text = args.user_prompt)])]
     response = client.models.generate_content(
-        model = "gemini-3-flash-preview", contents = messages)
+        model = "gemini-2.5-flash",
+        contents = messages,
+        config = types.GenerateContentConfig(
+            system_instruction=LLM_config.system_prompt, 
+            tools=[LLM_config.available_functions]
+        ),
+    )
     
     prompt_tokens = response.usage_metadata.prompt_token_count
     completion_tokens = response.usage_metadata.candidates_token_count
@@ -29,7 +37,22 @@ def main():
         print(f"Prompt tokens: {prompt_tokens}")
         print(f"Response tokens: {completion_tokens}")
 
-    print(response.text)
+    if response.function_calls != None:
+        resultslist = []
+        for call in response.function_calls:
+            function_call_result = LLM_config.call_function(call)
+            if not function_call_result.parts:
+                raise Exception(f"Error: function call {call} did not return: no parts(0)")
+            if not function_call_result.parts[0].function_response:
+                raise Exception(f"Error: function call {call} did not return: no function_response(1)")
+            if function_call_result.parts[0].function_response.response == None:
+                raise Exception(f"Error: function call {call} did not return: no response(2)")
+            resultslist.append(function_call_result.parts[0])
+            if args.verbose:
+                print(f"-> {function_call_result.parts[0].function_response.response}")
+
+    else:
+        print(response.text)
 
 
 
